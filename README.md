@@ -2,10 +2,10 @@
 
 ### Content
 * [Analysis](#analysis)
-  - [Download Data](#download-data)
-  - [Endogenous Virus Element (EVE) Analysis](#endogenous-virus-element-analysis)
-  - [DRAK1/STK17A ORF Detection Analysis](#orf-detection-analysis)
-  - [ORF Prediction](#orf-prediction)
+  - [Genome Assembly Analysis](#genome-assembly-analysis)
+  - [Endogenous Virus Element (EVE) Analysis](#endogenous-virus-element-eve-analysis)
+  - [DRAK1/STK17A ORF Detection Analysis](#drak1/stk17a-orf-detection-analysis)
+  - [Phylogenetic Tree Analysis](#phylogenetic-tree-analysis)
 * [Data and Figures in the Manuscript](#data-and-figures-in-the-manuscript)
   - [Data](#data)
   - [Figures](#figures)
@@ -24,13 +24,13 @@ datasets summary genome taxon {taxon_id} > ncbi_datasets_summary_genome_taxon_{t
 
 * Check Assembly Quality from NCBI MetaData ([busco](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/genomes/large-download))
 ```bash
-datasets download genome accession {accession_id} --include genome,rna,protein,cds,gff3,gtf,gbff,seq-report --assembly-level chromosome,complete,contig,scaffold --filename {accession_id}.zip --dehydrated
-unzip {accession_id}.zip -d {accession_id}
-datasets rehydrate --directory {accession_id}
-datasets summary genome accession {accession_id} > ncbi_datasets_summary_genome_{accession_id}.json"
+
 ```
 
 * Check Assembly Completeness Using BUSCO ([busco](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/genomes/large-download))
+```bash
+
+```
 
 ### Endogenous Virus Element (EVE) Analysis
 * Softmasking repeats with Repeatmasker
@@ -58,8 +58,6 @@ wget ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
 ```
 
 * create virus DB for MMSeq run ([mmseq:createtaxdb](https://github.com/soedinglab/mmseqs2/wiki#create-a-seqtaxdb-by-manual-annotation-of-a-sequence-database))
-# Create SeqTaxDB
-
 ```bash
 mmseqs \
   createtaxdb \
@@ -164,10 +162,12 @@ python extract_seq_from_genewise.py \
 
 * Search ORF Best-aligned to DRAK1/STK7A on NR DB using Diamond ([diamond](https://github.com/bbuchfink/diamond))
 ```bash
+diamond makedb --in {nr.fasta} -d {db}
+
 # e.g. sensitivity = sensitive
 diamond \
   blastp \
-  -d {nr_db} \
+  -d {nr.fasta} \
   -q {fasta_query}.genewise.out.pep.faa \
   -o {blast_out}.genewise.out.pep.faa.blastout \
   --{sensitivity} \
@@ -175,3 +175,11 @@ diamond \
 ```
 
 ### Phylogenetic Tree Analysis
+*MACSE ([macse]())
+*trim ([trimal]())
+*RAXML ([raxml]())
+*ASTRAL4 ([aster]())
+*ggtree ([ggtree]())
+
+### Positive Selection Test Analysis
+*HyPhy ([hyphy]())
