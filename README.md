@@ -4,7 +4,7 @@
 * [Analysis](#analysis)
   - [Genome Assembly Analysis](#genome-assembly-analysis)
   - [Endogenous Virus Element (EVE) Analysis](#endogenous-virus-element-eve-analysis)
-  - [DRAK1/STK17A ORF Detection Analysis](#drak1/stk17a-orf-detection-analysis)
+  - [DRAK1/STK17A ORF Detection Analysis](#drak1stk17a-orf-detection-analysis)
   - [Phylogenetic Tree Analysis](#phylogenetic-tree-analysis)
 * [Data and Figures in the Manuscript](#data-and-figures-in-the-manuscript)
   - [Data](#data)
@@ -22,9 +22,15 @@ datasets rehydrate --directory {taxon_id}
 datasets summary genome taxon {taxon_id} > ncbi_datasets_summary_genome_taxon_{taxon_id}.json
 ```
 
-* Check Assembly Quality from NCBI MetaData ([busco](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/genomes/large-download))
+* Get Taxonomy Data FROM NCBI ([ncbitax2lin](https://github.com/zyxue/ncbitax2lin))
 ```bash
+ncbitax2lin --nodes-file taxdump/nodes.dmp --names-file taxdump/names.dmp
+python parseTaxonomyNCBI.py
+```
 
+* Check Assembly Quality From NCBI ([busco](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/genomes/large-download))
+```bash
+python parseMetaDataNCBIDataset.py
 ```
 
 * Check Assembly Completeness Using BUSCO ([busco](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/genomes/large-download))
@@ -39,7 +45,7 @@ busco \
   --out {outfilename} \
   --metaeuk \
   --offline \
-  --force"
+  --force
 ```
 
 ### Endogenous Virus Element (EVE) Analysis
@@ -90,10 +96,18 @@ mmseqs\
   --mask-lower-case 1
 ```
 
+* Different Viral Blast Hit Analysis Using Negative Binomial GLM
+```bash
+python parseViralSeqMMSeq.py
+python plotViralSeqMMSeq.py
+python runDifferentialBlastHitAnalysisNegBinomialGLM.py
+python plotLog2FCtTestPvalueBlastHitAnalysis.py
+```
+
 ### DRAK1/STK17A ORF Detection Analysis
 * Make Index File for Genome Fasta using Samtools ([samtools](http://www.htslib.org))
 ```bash
-samtools faidx {genome_fna}"
+samtools faidx {genome_fna}
 ```
 
 * First-pass Exonerate Run For Exon-Intron-Aware ORF Detection ([exonerate](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-31))
@@ -105,7 +119,7 @@ exonerate \
   --showtargetgff yes \
   --showvulgar yes \
   --verbose 3 \
-  > {outprefix}"
+  > {outprefix}
 ```
 
 * Parse All Exonerate Outputs Into Bed File
@@ -151,7 +165,12 @@ exonerate \
 python extractExonerateBestFitCds.py \
   {file_exonerate}.exo.bestfit.allhit.out \
   {outprefix}_{flank_region}bp_flank.fa \
-  {outprefix}.cds.fa"
+  {outprefix}.cds.fa
+```
+
+* Split CDS Multi-Fasta Into A Single-Fasta
+```bash
+python splitGenomeFasta.py
 ```
 
 * Genewise Run For Codon-aware ORF Detection ([genewise](https://www.ebi.ac.uk/jdispatcher/psa/genewise))
@@ -164,7 +183,7 @@ genewise \
   -matrix {BLOSUM62.bla} \
   -codon {codon.table} \
   -genesf -gff -cdna -pep -pseudo -pretty -ace -both -gener \
-  > {outprefix}.genewise.out"
+  > {outprefix}.genewise.out
 
 python extract_seq_from_genewise.py \
   --input {outprefix}.genewise.out
@@ -172,9 +191,12 @@ python extract_seq_from_genewise.py \
 
 * Search ORF Best-aligned to DRAK1/STK7A on NR DB using Diamond ([diamond](https://github.com/bbuchfink/diamond))
 ```bash
-diamond makedb --in {nr.fasta} -d {db}
-
 # e.g. sensitivity = sensitive
+diamond \
+  makedb \
+  --in {nr.fasta} \ 
+  -d {nr_db}
+
 diamond \
   blastp \
   -d {nr.fasta} \
@@ -184,18 +206,23 @@ diamond \
   --threads 3
 ```
 
+* Codon-aware Multiple Sqeuence Alignemnt Using PRANK ([prank](https://github.com/ariloytynoja/prank-msa))
+```bash
+prank -d={fasta_query}.faa -o={fasta_aln}.prank.aln.faa -F -protein"
+```
+
 ### Phylogenetic Tree Analysis
-*Codon-aware Multiple Sequence Alignment Using MACSE ([macse](https://www.agap-ge2pop.org/macse/))
+* Codon-aware Multiple Sequence Alignment Using MACSE ([macse](https://www.agap-ge2pop.org/macse/))
 ```bash
 # ortholog = busco output
 macse \
   -prog alignSequences \
   -seq {ortholog}.fna \
   -out_NT {ortholog}.aln.fna \
-  -out_AA {ortholog}.aln.faa"
+  -out_AA {ortholog}.aln.faa
 ```
 
-*Trim Alignments Using trimAl ([trimal](https://trimal.readthedocs.io/en/latest/))
+* Trim Alignments Using trimAl ([trimal](https://trimal.readthedocs.io/en/latest/))
 ```bash
 trimal \
   -in {ortholog}.aln.trimmed.fna \
@@ -205,7 +232,7 @@ trimal \
   -automated1
 ```
 
-*Build Gene Tress using RAXML ([raxml-ng](https://github.com/amkozlov/raxml-ng))
+* Build Gene Tress using RAXML ([raxml-ng](https://github.com/amkozlov/raxml-ng))
 ```bash
 # boostrap_num = 100
 raxml \
@@ -219,7 +246,7 @@ raxml \
 cat {dir_raxml}/*.bestTree >> concat.all.raxml.bestTree
 ```
 
-*ASTRAL4 ([aster:astral4](https://github.com/chaoszhang/ASTER/blob/master/tutorial/astral4.md))
+* ASTRAL4 ([aster:astral4](https://github.com/chaoszhang/ASTER/blob/master/tutorial/astral4.md))
 ```bash
 astral4 \
   -r 4 \
@@ -231,13 +258,12 @@ astral4 \
   2> astral.log
 ```
 
-*ggtree ([ggtree](https://yulab-smu.top/treedata-book/chapter4.html))
+* ggtree ([ggtree](https://yulab-smu.top/treedata-book/chapter4.html))
 ```bash
-Rscript 
 ```
 
 ### Positive Selection Test Analysis
-*HyPhy ([hyphy](https://github.com/veg/hyphy))
+* HyPhy ([hyphy](https://github.com/veg/hyphy))
 ```bash
 # path_bf = path to batch file (i.e., REALX.bf)
 # test = LOSS (i.e., complete loss)
