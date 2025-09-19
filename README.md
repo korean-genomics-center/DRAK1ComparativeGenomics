@@ -1,4 +1,4 @@
-# FlapnoseRayTranscriptome
+# DRAK1 Comparative Genomics
 
 ### Content
 * [Analysis](#analysis)
@@ -29,7 +29,17 @@ datasets summary genome taxon {taxon_id} > ncbi_datasets_summary_genome_taxon_{t
 
 * Check Assembly Completeness Using BUSCO ([busco](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/genomes/large-download))
 ```bash
-
+# mode = genome
+busco \
+  -i {genome_fna} \
+  -m {mode} \
+  --lineage_dataset {mammalia_odb12} \
+  --cpu 40 \
+  --out_path {outdir} \
+  --out {outfilename} \
+  --metaeuk \
+  --offline \
+  --force"
 ```
 
 ### Endogenous Virus Element (EVE) Analysis
@@ -118,15 +128,15 @@ bedtools slop \
 
 bedtools getfasta \
   -fi {genome_fna} \
-  -bed {outprefix}_{self.flank_region}bp_flank.bed \
-  > {outprefix}_{self.flank_region}bp_flank.fa
+  -bed {outprefix}_{flank_region}bp_flank.bed \
+  > {outprefix}_{flank_region}bp_flank.fa
 ```
 
 * Second-pass Exonerate Run For ORF Detection
 ```bash
 exonerate \
   --model protein2genome:bestfit \
-  --query {outprefix}_{self.flank_region}bp_flank.fa \
+  --query {outprefix}_{flank_region}bp_flank.fa \
   --target {drak1_faa} \
   --showtargetgff yes \
   --showvulgar yes \
@@ -140,7 +150,7 @@ exonerate \
 ```bash
 python extractExonerateBestFitCds.py \
   {file_exonerate}.exo.bestfit.allhit.out \
-  {outprefix}_{self.flank_region}bp_flank.fa \
+  {outprefix}_{flank_region}bp_flank.fa \
   {outprefix}.cds.fa"
 ```
 
@@ -175,11 +185,71 @@ diamond \
 ```
 
 ### Phylogenetic Tree Analysis
-*MACSE ([macse]())
-*trim ([trimal]())
-*RAXML ([raxml]())
-*ASTRAL4 ([aster]())
-*ggtree ([ggtree]())
+*Codon-aware Multiple Sequence Alignment Using MACSE ([macse](https://www.agap-ge2pop.org/macse/))
+```bash
+# ortholog = busco output
+macse \
+  -prog alignSequences \
+  -seq {ortholog}.fna \
+  -out_NT {ortholog}.aln.fna \
+  -out_AA {ortholog}.aln.faa"
+```
+
+*Trim Alignments Using trimAl ([trimal](https://trimal.readthedocs.io/en/latest/))
+```bash
+trimal \
+  -in {ortholog}.aln.trimmed.fna \
+  -out {ortholog}.aln.trimmed.fna \
+  -htmlout {ortholog}.html \
+  -keepheader \
+  -automated1
+```
+
+*Build Gene Tress using RAXML ([raxml-ng](https://github.com/amkozlov/raxml-ng))
+```bash
+# boostrap_num = 100
+raxml \
+  --threads 30 \
+  --msa {ortholog}.aln.trimmed.cleaned.fna \
+  --model GTR+G \
+  --prefix {ortholog} \
+  --all \
+  --bs-trees {boostrap_num}
+
+cat {dir_raxml}/*.bestTree >> concat.all.raxml.bestTree
+```
+
+*ASTRAL4 ([aster:astral4](https://github.com/chaoszhang/ASTER/blob/master/tutorial/astral4.md))
+```bash
+astral4 \
+  -r 4 \
+  -s 4 \
+  -i concat.all.raxml.bestTree \
+  -o astral.out.speciesTree \
+  -g mammalian_265_species.pruned.nwk \
+  -t 100 \
+  2> astral.log
+```
+
+*ggtree ([ggtree](https://yulab-smu.top/treedata-book/chapter4.html))
+```bash
+Rscript 
+```
 
 ### Positive Selection Test Analysis
-*HyPhy ([hyphy]())
+*HyPhy ([hyphy](https://github.com/veg/hyphy))
+```bash
+# path_bf = path to batch file (i.e., REALX.bf)
+# test = LOSS (i.e., complete loss)
+# ref = INTACT (i.e., intact + partial loss)
+# model = standard
+
+hyphy {path_bf}\
+  --alignment {ortholog}.aln.cleaned.matched.fna \
+  --tree astral.out.pruned.annotated.speciesTree \
+  --test {test} \
+  --reference {ref} \
+  --models {model} \
+  --output {ortholog}.RELAX.out \
+  | tee -a {ortholog}.RELAX.log
+```
